@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task Manager - Вход в систему</title>
+    
+    <!-- Стили -->
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/a.css">
+    <link rel="stylesheet" href="css/auth.css">
+    
+    <!-- Иконка -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔐</text></svg>">
+    
+    <style>
+        /* Минимальные стили только для страницы */
+        body {
+            background-color: #d08cbe;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .page-container {
+            width: 100%;
+            max-width: 600px;
+            padding: 20px;
+        }
+        
+        .logo {
+            text-align: center;
+            margin-bottom: 30px;
+            color: white;
+        }
+        
+        .logo h1 {
+            margin: 0;
+            font-size: 2.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+        
+        .logo p {
+            margin-top: 10px;
+            opacity: 0.8;
+            font-size: 1.1rem;
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="page-container">
+        <!-- Логотип -->
+        <div class="logo">
+            <h1>
+                <span>🔐</span>
+                Task Manager
+            </h1>
+            <p>Система управления задачами</p>
+        </div>
+        
+        <!-- Контейнер приложения -->
+        <div id="app">
+            <!-- Сюда будет вставлен интерфейс аутентификации -->
+        </div>
+        
+        <!-- Подвал -->
+        <div class="footer">
+            <p>© 2024 Task Manager. Все права защищены.</p>
+        </div>
+    </div>
+
+    <!-- Подключаем наши скрипты -->
+    <script src="js/auth-in.js"></script>
+    <script src="js/app.js"></script>
+    <!-- 
+        Разработчик должен подключить свой скрипт здесь:
+        <script src="js/auth-in.js"></script>
+    -->
+    
+    <script>
+        // Минимальная инициализация
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Task Manager загружен');
+        });
+    </script>
+</body>
+</html>
