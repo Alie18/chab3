@@ -85,11 +85,62 @@
 
     <!-- Подключаем наши скрипты -->
     <script src="js/auth-in.js"></script>
+    <script src="js/ui/auth-ui.js"></script>
     <script src="js/app.js"></script>
-    <!-- 
-        Разработчик должен подключить свой скрипт здесь:
-        <script src="js/auth-in.js"></script>
-    -->
+    <!-- После других скриптов -->
+    <script src="js/config.js"></script>
+    <script>
+    // Инициализация после загрузки
+    document.addEventListener('DOMContentLoaded', function() {
+        // Создаем экземпляр AuthIntegration
+        const authSystem = new AuthIntegration({
+            apiBaseUrl: 'http://localhost:8000',
+            
+            onLoginSuccess: function(user) {
+                console.log('Успешный вход!', user);
+                
+                // Показываем интерфейс после входа
+                if (window.App && App.showMainInterface) {
+                    App.showMainInterface({
+                        username: user.email?.split('@')[0] || 'Пользователь',
+                        email: user.email,
+                        authMethod: user.auth_method || 'email',
+                        id: user.id
+                    });
+                }
+            },
+            
+            onLogout: function() {
+                console.log('Пользователь вышел');
+                // Возвращаем к форме входа
+                if (window.App && App.showAuthInterface) {
+                    App.showAuthInterface();
+                }
+            },
+            
+            onError: function(error, context) {
+                console.error(`Ошибка в ${context}:`, error);
+                // Показываем ошибку пользователю
+                alert(`Ошибка: ${error.message}`);
+            }
+        });
+        
+        // Инициализируем систему
+        authSystem.init();
+        
+        // Активируем все disabled поля
+        document.querySelectorAll('input, button').forEach(el => {
+            if (el.disabled) {
+                el.disabled = false;
+                el.style.opacity = '1';
+                el.style.cursor = 'pointer';
+            }
+        });
+        
+        // Сохраняем в глобальной области для отладки
+        window.authSystem = authSystem;
+    });
+</script>
     
     <script>
         // Минимальная инициализация
@@ -97,5 +148,6 @@
             console.log('Task Manager загружен');
         });
     </script>
+    
 </body>
 </html>

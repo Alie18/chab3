@@ -82,14 +82,14 @@ class AuthIntegration {
 
     // OAuth методы
     async startGitHubAuth(action = 'login') {
-        const authUrl = `${this.config.apiBaseUrl}/auth/github`;
-        window.location.href = authUrl;
-    }
+    const authUrl = `${this.config.apiBaseUrl}${this.config.endpoints.GITHUB_AUTH}`;
+    window.location.href = authUrl;
+}
 
     async startYandexAuth(action = 'login') {
-        const authUrl = `${this.config.apiBaseUrl}/auth/yandex`;
-        window.location.href = authUrl;
-    }
+    const authUrl = `${this.config.apiBaseUrl}${this.config.endpoints.YANDEX_AUTH}`;
+    window.location.href = authUrl;
+}
 
     // Email аутентификация
     async startEmailAuth() {
