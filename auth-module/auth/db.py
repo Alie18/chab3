@@ -17,7 +17,16 @@ database = client[DB_NAME]
 # Основные коллекции
 users_collection = database.get_collection("users")
 codes_collection = database.get_collection("verification_codes")
+sessions_collection = database.get_collection("auth_sessions") 
+code_sessions_collection = database.get_collection("code_sessions")
 
-# Создаём TTL-индекс для автоматического удаления кодов через 5 минут
+# Создаём TTL-индексы для автоматического удаления
 async def init_db():
+    # Для кодов верификации (уже было)
     await codes_collection.create_index("created_at", expireAfterSeconds=300)
+    
+    # Для сессий авторизации (новое)
+    # MongoDB автоматически удалит документы, где expires_at < текущее время
+    await sessions_collection.create_index("expires_at", expireAfterSeconds=0)
+
+    await code_sessions_collection.create_index("expires_at", expireAfterSeconds=60)

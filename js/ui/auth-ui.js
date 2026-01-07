@@ -12,16 +12,16 @@ class AuthUI {
                     <h2>Вход в систему</h2>
                     
                     <div class="input-group">
-                        <input type="text" id="login-username" placeholder="Имя пользователя или Email" class="auth-input" disabled>
+                        <input type="text" id="login-username" placeholder="Имя пользователя или Email" class="auth-input">
                         <div class="input-icon">👤</div>
                     </div>
                     
                     <div class="input-group">
-                        <input type="password" id="login-password" placeholder="Пароль" class="auth-input" disabled>
+                        <input type="password" id="login-password" placeholder="Пароль" class="auth-input">
                         <div class="input-icon">🔒</div>
                     </div>
                     
-                    <button id="login-btn" class="btn-primary auth-btn" disabled>
+                    <button id="login-btn" class="btn-primary auth-btn">
                         <span class="btn-text">Войти</span>
                     </button>
                     
@@ -178,9 +178,9 @@ class AuthUI {
                 e.target.classList.add('active');
                 
                 // Показываем соответствующую форму
-                document.getElementById('login-form').style.display = 
+                document.getElementById('login-form').style.display =
                     tabName === 'login' ? 'block' : 'none';
-                document.getElementById('register-form').style.display = 
+                document.getElementById('register-form').style.display =
                     tabName === 'register' ? 'block' : 'none';
             });
         });
@@ -191,6 +191,54 @@ class AuthUI {
             document.querySelector('.auth-tab[data-tab="login"]').click();
         });
         
+        // Обработчик кнопки входа
+        document.getElementById('login-btn')?.addEventListener('click', async () => {
+            const username = document.getElementById('login-username')?.value;
+            const password = document.getElementById('login-password')?.value;
+            
+            if (!username || !password) {
+                console.log('Пожалуйста, введите имя пользователя и пароль');
+                return;
+            }
+            
+            try {
+                const result = await AuthUI.login(username, password);
+                console.log('Успешный вход:', result);
+                
+                // Передаем управление основному приложению
+                if (window.App && typeof window.App.showMainInterface === 'function') {
+                    window.App.showMainInterface(result);
+                }
+            } catch (error) {
+                console.error('Ошибка аутентификации:', error);
+            }
+        });
+        
         console.log('✅ UI обработчики настроены. Ожидание интеграции от разработчика...');
+    }
+
+    static async login(username, password) {
+        try {
+            const response = await fetch('http://localhost:8000/api/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    username: username,
+                    password: password
+                })
+            });
+            
+            if (!response.ok) {
+                throw new Error(`Ошибка HTTP: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            return data;
+        } catch (error) {
+            console.error('Ошибка при входе:', error);
+            throw error;
+        }
     }
 }
