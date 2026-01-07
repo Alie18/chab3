@@ -105,10 +105,6 @@ class AuthUI {
                                 <div class="input-icon">🔒</div>
                             </div>
                             
-                            <div class="password-strength">
-                                <div class="strength-bar"></div>
-                                <div class="strength-text">Надёжность пароля: <span>слабый</span></div>
-                            </div>
                             
                             <button id="register-btn" class="btn-primary auth-btn" disabled>
                                 <span class="btn-text">Зарегистрироваться</span>
@@ -256,8 +252,9 @@ class AuthUI {
             }
 
             try {
-                if (window.App && typeof App.requestCode === 'function') {
-                    await App.requestCode(email);
+                // Используем App (из app.js), который вы уже реализовали
+                if (window.authSystem) {
+                    await authSystem.requestCode(email);
                     alert(`Код отправлен на ${email}\nВведите его в форме "Вход по email-коду"`);
 
                     // Автоматически переключаемся на вкладку "Вход"
@@ -316,18 +313,15 @@ class AuthUI {
             const code = document.getElementById('code-input')?.value.trim();
 
             if (!email || !code) {
-                this.updateCodeStatus('Заполните email и код', 'error');
+                alert('Заполните email и код');
                 return;
             }
 
             try {
-                if (window.App && typeof App.loginByCode === 'function') {
-                    await App.loginByCode(email, code);
-                } else {
-                    throw new Error('App.loginByCode не найден');
-                }
+                await App.loginByCode(email, code);
+                alert('Успешный вход!');
             } catch (err) {
-                this.updateCodeStatus(err.message, 'error');
+                alert('Ошибка: ' + err.message);
             }
         });
     }
