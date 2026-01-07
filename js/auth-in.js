@@ -1,4 +1,3 @@
-// AuthIntegration.js - Публичный API для интеграции
 class AuthIntegration {
     constructor(config = {}) {
         // Настройки по умолчанию
@@ -6,6 +5,7 @@ class AuthIntegration {
             apiBaseUrl: 'http://localhost:8000',
             tokenStorageKey: 'auth_token',
             userStorageKey: 'auth_user',
+            refreshStorageKey: 'auth_refresh',
             onLoginSuccess: null,
             onLogout: null,
             onError: null,
@@ -17,23 +17,47 @@ class AuthIntegration {
         };
         
         this.token = localStorage.getItem(this.config.tokenStorageKey);
+        this.refresh_token = localStorage.getItem(this.config.refreshStorageKey);
         this.user = JSON.parse(localStorage.getItem(this.config.userStorageKey) || 'null');
         this.isInitialized = false;
+
+        // Автоматическая проверка сессии при инициализации
+        if (this.config.validateOnInit && (this.token || this.refresh_token)) {
+            this.checkAuthStatus().catch(console.warn);
+        }
     }
 
-    // Основные методы (оставляем только основные)
+    // Проверка состояния (токен жив? нужно обновить?)
+    async checkAuthStatus() {
+        if (this.token) {
+            try {
+                await this.fetchCurrentUser();
+                return true;
+            } catch (err) {
+                console.warn('Токен недействителен, пробуем обновить...');
+            }
+        }
+
+        if (this.refresh_token) {
+            try {
+                await this.refreshToken();
+                await this.fetchCurrentUser();
+                return true;
+            } catch (err) {
+                console.warn('Не удалось обновить сессию');
+                this.clearAuth();
+            }
+        }
+
+        return false;
+    }
+
     init() {
         console.log('🔧 Инициализация системы аутентификации...');
         
         try {
             if (this.config.autoBind) {
                 this.bindToButtons();
-            }
-            
-            if (this.config.validateOnInit && this.token) {
-                this.validateToken().catch(() => {
-                    this.clearAuth();
-                });
             }
             
             this.handleOAuthCallback();
@@ -62,8 +86,12 @@ class AuthIntegration {
         this.bindButton('login-btn', () => this.startEmailAuth());
         this.bindButton('register-btn', () => this.startEmailRegistration());
 
+        // Кросс-девайс
+        this.bindButton('cross-device-btn', () => this.startCrossDeviceAuth()); // ← ДОБАВЛЕНО
+
         // Выход
         this.bindButton('logout-btn', () => this.logout());
+        this.bindButton('logout-all-btn', () => this.logout(true)); // ← ДОБАВЛЕНО
     }
     
     bindButton(id, handler) {
@@ -137,6 +165,22 @@ class AuthIntegration {
         }
     }
 
+    // Кросс-девайс авторизация
+    async startCrossDeviceAuth() {
+        const code = prompt('Введите код из Telegram (6 цифр):');
+        if (!code || code.length !== 6) {
+            alert('Неверный формат кода');
+            return;
+        }
+
+        try {
+            const result = await this.submitCrossCode(code);
+            alert(result.message || 'Авторизация завершена');
+        } catch (err) {
+            alert('Ошибка: ' + (err.message || 'Не удалось подтвердить код'));
+        }
+    }
+
     // API методы
     async requestCode(email) {
         const response = await fetch(`${this.config.apiBaseUrl}/auth/code/request`, {
@@ -170,10 +214,57 @@ class AuthIntegration {
         }
         
         const data = await response.json();
-        this.setToken(data.access_token);
+        
+        this.setTokens(data.access_token, data.refresh_token);
         await this.fetchCurrentUser();
         
         return data;
+    }
+
+    // Обновление токена
+    async refreshToken() {
+        if (!this.refresh_token) {
+            throw new Error('Нет refresh_token для обновления');
+        }
+
+        const response = await fetch(`${this.config.apiBaseUrl}/auth/refresh`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...this.config.customHeaders
+            },
+            body: JSON.stringify({ refresh_token: this.refresh_token })
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: Не удалось обновить токен`);
+        }
+
+        const data = await response.json();
+        this.setTokens(data.access_token, data.refresh_token);
+        return data;
+    }
+
+    // Кросс-девайс подтверждение
+    async submitCrossCode(code) {
+        if (!this.refresh_token) {
+            throw new Error('Нужен refresh_token для кросс-девайс авторизации');
+        }
+
+        const response = await fetch(`${this.config.apiBaseUrl}/auth/code/submit`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...this.config.customHeaders
+            },
+            body: JSON.stringify({ code, refresh_token: this.refresh_token })
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+
+        return await response.json();
     }
 
     async fetchCurrentUser() {
@@ -189,6 +280,11 @@ class AuthIntegration {
         });
         
         if (!response.ok) {
+            // Aвтообновление при 401
+            if (response.status === 401 && this.refresh_token) {
+                await this.refreshToken();
+                return this.fetchCurrentUser();
+            }
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
         
@@ -198,10 +294,16 @@ class AuthIntegration {
         return user;
     }
 
-    // Управление сессией
+    // Управление обоими токенами
+    setTokens(accessToken, refreshToken) {
+        this.token = accessToken;
+        this.refresh_token = refreshToken;
+        localStorage.setItem(this.config.tokenStorageKey, accessToken);
+        localStorage.setItem(this.config.refreshStorageKey, refreshToken); // сохраняем refresh
+    }
+
     setToken(token) {
-        this.token = token;
-        localStorage.setItem(this.config.tokenStorageKey, token);
+        this.setTokens(token, this.refresh_token);
     }
 
     setUser(user) {
@@ -222,7 +324,23 @@ class AuthIntegration {
         }
     }
 
-    logout() {
+    // Выход со всех устройств
+    async logout(logoutAll = false) {
+        if (logoutAll && this.refresh_token) {
+            try {
+                await fetch(`${this.config.apiBaseUrl}/auth/logout`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...this.config.customHeaders
+                    },
+                    body: JSON.stringify({ refresh_token: this.refresh_token })
+                });
+            } catch (err) {
+                console.warn('Не удалось выйти со всех устройств:', err);
+            }
+        }
+
         this.clearAuth();
         
         if (this.config.onLogout) {
@@ -236,8 +354,10 @@ class AuthIntegration {
 
     clearAuth() {
         this.token = null;
+        this.refresh_token = null;
         this.user = null;
         localStorage.removeItem(this.config.tokenStorageKey);
+        localStorage.removeItem(this.config.refreshStorageKey);
         localStorage.removeItem(this.config.userStorageKey);
     }
 
@@ -254,7 +374,7 @@ class AuthIntegration {
         }
         
         if (token) {
-            this.setToken(token);
+            this.setTokens(token, null);
             this.fetchCurrentUser().then(() => {
                 this.cleanUrl();
             }).catch(err => {
@@ -292,19 +412,87 @@ class AuthIntegration {
         this.showMessage('login-message', `Ошибка: ${error.message}`, 'error');
     }
 
+    // Универсальный API-запрос с поддержкой авторизации и auto-refresh
+    async apiRequest(url, options = {}) {
+        if (this.token) {
+            options.headers = {
+                ...options.headers,
+                'Authorization': `Bearer ${this.token}`
+            };
+        }
+
+        let response = await fetch(`${this.config.apiBaseUrl}${url}`, options);
+
+        // Автообновление при 401
+        if (response.status === 401 && this.refresh_token) {
+            try {
+                await this.refreshToken();
+                // Повторяем запрос
+                options.headers['Authorization'] = `Bearer ${this.token}`;
+                response = await fetch(`${this.config.apiBaseUrl}${url}`, options);
+            } catch (err) {
+                this.clearAuth();
+                throw new Error('Сессия истекла');
+            }
+        }
+
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            throw new Error(error.message || `HTTP ${response.status}`);
+        }
+
+        return await response.json();
+    }
+
     // Геттеры
     getCurrentUser() {
         return this.user;
     }
 
     isAuthenticated() {
-        return !!this.token && !!this.user;
+        return !!this.token;
     }
 
     getToken() {
         return this.token;
     }
+
+    // Получить refresh_token (для кросс-девайса)
+    getRefreshToken() {
+        return this.refresh_token;
+    }
+
+    // Инициализация для Web Client
+    static initForWebClient() {
+        return new AuthIntegration({
+            apiBaseUrl: 'http://localhost:8000',
+            autoBind: true,
+            validateOnInit: true,
+            onLoginSuccess: (user) => {
+                if (window.App && App.showMainInterface) {
+                    App.showMainInterface({
+                        username: user.email?.split('@')[0] || 'Пользователь',
+                        email: user.email,
+                        authMethod: user.auth_method,
+                        id: user.id
+                    });
+                }
+            },
+            onLogout: () => {
+                if (window.App && App.showAuthInterface) {
+                    App.showAuthInterface();
+                }
+            }
+        }).init();
+    }
 }
 
 // Экспортируем глобально
 window.AuthIntegration = AuthIntegration;
+
+//Автоинициализация при загрузке (опционально)
+document.addEventListener('DOMContentLoaded', () => {
+    if (!window.authSystem) {
+        window.authSystem = AuthIntegration.initForWebClient();
+    }
+});
