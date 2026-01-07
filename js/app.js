@@ -137,6 +137,9 @@ class App {
         this.renderAuthInterface();
     }
 
+    // ================ ДОБАВЛЕННЫЙ КОД НИЖЕ ================
+    // Вся логика авторизации — без изменения старого кода
+
     // Хранилище токенов
     static tokens = {
         access_token: localStorage.getItem('access_token'),
@@ -168,6 +171,7 @@ class App {
     static async apiFetch(url, options = {}) {
         const { access_token, refresh_token } = this.tokens;
 
+        // Добавляем заголовок Authorization
         if (access_token) {
             options.headers = {
                 ...options.headers,
@@ -296,7 +300,7 @@ class App {
         this.showAuthInterface();
     }
 
-    // Обработка кросс-девайс авторизации
+    // Обработка кросс-девайс авторизации (из UI)
     static async handleCrossDeviceAuth() {
         const code = prompt('Введите код из Telegram (6 цифр):');
         if (!code || code.length !== 6) {
