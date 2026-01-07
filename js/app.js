@@ -190,9 +190,9 @@ class App {
             const error = await response.json().catch(() => ({}));
             throw new Error(error.message || `HTTP ${response.status}`);
         }
+
         return await response.json();
     }
-
     static async submitCrossCode(code) {
         if (!this.tokens.refresh_token) {
             throw new Error('Нужен refresh_token для кросс-девайс авторизации');
