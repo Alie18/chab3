@@ -235,6 +235,44 @@ class AuthUI {
         el.removeAttribute('disabled');
         });
 
+        document.getElementById('github-register-btn')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            window.location.href = 'http://localhost:8000/auth/github';
+        });
+
+        document.getElementById('yandex-register-btn')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            window.location.href = 'http://localhost:8000/auth/yandex';
+        });
+
+        // Кнопка "Зарегистрироваться" (по email-коду)
+        document.getElementById('register-btn')?.addEventListener('click', async (e) => {
+            e.preventDefault();
+
+            const email = document.getElementById('register-email')?.value.trim();
+            if (!email) {
+                alert('Введите email');
+                return;
+            }
+
+            try {
+                // Используем App (из app.js), который вы уже реализовали
+                if (window.App && typeof App.requestCode === 'function') {
+                    await App.requestCode(email);
+                    alert(`Код отправлен на ${email}\nВведите его в форме "Вход по email-коду"`);
+
+                    // Автоматически переключаемся на вкладку "Вход"
+                    document.querySelector('.auth-tab[data-tab="login"]').click();
+                    document.getElementById('code-email').value = email;
+                    document.getElementById('code-form').style.display = 'block';
+                } else {
+                    throw new Error('App.requestCode не найден — проверьте app.js');
+                }
+            } catch (err) {
+                alert('Ошибка: ' + err.message);
+            }
+        });
+
         // GitHub и Яндекс — редирект
         document.getElementById('github-login')?.addEventListener('click', (e) => {
             e.preventDefault();
