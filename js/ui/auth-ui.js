@@ -46,11 +46,30 @@ class AuthUI {
                             <span>Войти через Яндекс</span>
                         </a>
 
-                       
+                        <!-- Код-вход -->
+                        <button id="code-login-btn" class="btn-code social-btn" style="background: #007bff; color: white;">
+                            <span>📧 Войти по email-коду</span>
+                        </button>
                     </div>
                     
-                    <div class="auth-note">
-                        <p>Для подключения логики аутентификации разработчик должен подключить свой скрипт</p>
+                    <!-- Форма email-кода (скрыта по умолчанию) -->
+                    <div id="code-form" class="auth-form" style="display: none; margin-top: 20px; padding: 20px; background: #f8f9fa; border-radius: 8px;">
+                        <h3>Войти по email-коду</h3>
+                        <div class="input-group">
+                            <input type="email" id="code-email" placeholder="Ваш email" class="auth-input">
+                            <div class="input-icon">📧</div>
+                        </div>
+                        <div class="input-group">
+                            <input type="text" id="code-input" placeholder="Код (6 цифр)" class="auth-input" maxlength="6">
+                            <div class="input-icon">#</div>
+                        </div>
+                        <button id="request-code-btn" class="btn-secondary auth-btn" style="margin: 10px 5px;">
+                            Отправить код
+                        </button>
+                        <button id="verify-code-btn" class="btn-primary auth-btn" style="margin: 10px 5px;">
+                            Подтвердить
+                        </button>
+                        <div id="code-status" style="margin-top: 10px; font-size: 14px;"></div>
                     </div>
                 </div>
                 
@@ -153,10 +172,6 @@ class AuthUI {
                     <div class="auth-links">
                         <p>Уже есть аккаунт? <a href="#" class="switch-to-login" onclick="return false;">Войти</a></p>
                     </div>
-                    
-                    <div class="auth-note">
-                        <p>Функционал регистрации будет активирован после подключения системы аутентификации</p>
-                    </div>
                 </div>
             </div>
         `;
@@ -215,5 +230,88 @@ class AuthUI {
         });
         
         console.log('✅ UI обработчики настроены. Ожидание интеграции от разработчика...');
+        
+        document.querySelectorAll('#register-form input, #register-form button').forEach(el => {
+        el.removeAttribute('disabled');
+        });
+
+        // GitHub и Яндекс — редирект
+        document.getElementById('github-login')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            window.location.href = 'http://localhost:8000/auth/github';
+        });
+
+        document.getElementById('yandex-login')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            window.location.href = 'http://localhost:8000/auth/yandex';
+        });
+
+        // Кнопка "Войти по email-коду"
+        document.getElementById('code-login-btn')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            const codeForm = document.getElementById('code-form');
+            codeForm.style.display = codeForm.style.display === 'none' ? 'block' : 'none';
+        });
+
+        // Запрос кода
+        document.getElementById('request-code-btn')?.addEventListener('click', async () => {
+            const email = document.getElementById('code-email')?.value.trim();
+            if (!email) {
+                this.updateCodeStatus('Введите email', 'error');
+                return;
+            }
+
+            try {
+                if (window.App && typeof App.requestCode === 'function') {
+                    await App.requestCode(email);
+                    this.updateCodeStatus('Код отправлен (см. консоль сервера)', 'success');
+                } else {
+                    throw new Error('App.requestCode не найден');
+                }
+            } catch (err) {
+                this.updateCodeStatus(err.message, 'error');
+            }
+        });
+
+        // Подтверждение кода
+        document.getElementById('verify-code-btn')?.addEventListener('click', async () => {
+            const email = document.getElementById('code-email')?.value.trim();
+            const code = document.getElementById('code-input')?.value.trim();
+
+            if (!email || !code) {
+                this.updateCodeStatus('Заполните email и код', 'error');
+                return;
+            }
+
+            try {
+                if (window.App && typeof App.loginByCode === 'function') {
+                    await App.loginByCode(email, code);
+                } else {
+                    throw new Error('App.loginByCode не найден');
+                }
+            } catch (err) {
+                this.updateCodeStatus(err.message, 'error');
+            }
+        });
+    }
+
+    // Вспомогательные методы
+
+    static updateCodeStatus(message, type = 'info') {
+        const el = document.getElementById('code-status');
+        if (el) {
+            el.textContent = message;
+            el.style.color = type === 'error' ? '#d32f2f' : '#2e7d32';
+        }
+    }
+
+    // Совместимость с существующим API (для парольного входа — пока заглушка)
+    static async login(username, password) {
+        return {
+            id: 'demo_123',
+            username: username,
+            email: username.includes('@') ? username : `${username}@example.com`,
+            authMethod: 'password'
+        };
     }
 }
