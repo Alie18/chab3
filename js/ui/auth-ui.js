@@ -256,7 +256,6 @@ class AuthUI {
             }
 
             try {
-                // Используем App (из app.js), который вы уже реализовали
                 if (window.App && typeof App.requestCode === 'function') {
                     await App.requestCode(email);
                     alert(`Код отправлен на ${email}\nВведите его в форме "Вход по email-коду"`);
