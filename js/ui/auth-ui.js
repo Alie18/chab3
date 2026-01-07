@@ -252,7 +252,6 @@ class AuthUI {
             }
 
             try {
-                // Используем App (из app.js), который вы уже реализовали
                 if (window.authSystem) {
                     await authSystem.requestCode(email);
                     alert(`Код отправлен на ${email}\nВведите его в форме "Вход по email-коду"`);
@@ -287,27 +286,29 @@ class AuthUI {
             codeForm.style.display = codeForm.style.display === 'none' ? 'block' : 'none';
         });
 
-        // Запрос кода
+        // Запрос кодa
         document.getElementById('request-code-btn')?.addEventListener('click', async () => {
             const email = document.getElementById('code-email')?.value.trim();
             if (!email) {
-                this.updateCodeStatus('Введите email', 'error');
+                AuthUI.updateCodeStatus('Введите email', 'error'); // ✅ AuthUI., а не this
                 return;
             }
 
             try {
-                if (window.App && typeof App.requestCode === 'function') {
+                console.log('Проверка App.requestCode:', typeof App.requestCode);
+                if (typeof App.requestCode === 'function') {
                     await App.requestCode(email);
-                    this.updateCodeStatus('Код отправлен (см. консоль сервера)', 'success');
+                    AuthUI.updateCodeStatus('Код отправлен (см. консоль сервера)', 'success'); // ✅
                 } else {
-                    throw new Error('App.requestCode не найден');
+                    throw new Error('App.requestCode не найден. Доступные методы: ' + Object.keys(App).join(', '));
                 }
             } catch (err) {
-                this.updateCodeStatus(err.message, 'error');
+                console.error('Ошибка в request-code-btn:', err);
+                AuthUI.updateCodeStatus(err.message, 'error');
             }
         });
 
-        // Подтверждение кода
+        // Подтверждение кодa
         document.getElementById('verify-code-btn')?.addEventListener('click', async () => {
             const email = document.getElementById('code-email')?.value.trim();
             const code = document.getElementById('code-input')?.value.trim();
@@ -318,10 +319,12 @@ class AuthUI {
             }
 
             try {
+                console.log('Вызываем App.loginByCode...');
                 await App.loginByCode(email, code);
-                alert('Успешный вход!');
+                alert('✅ Успешный вход!');
             } catch (err) {
-                alert('Ошибка: ' + err.message);
+                console.error('Ошибка loginByCode:', err);
+                alert('❌ Ошибка: ' + (err.message || 'Неизвестная ошибка'));
             }
         });
     }
