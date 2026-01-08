@@ -255,3 +255,44 @@ h4 { font-size: 18px; }
         padding: 20px;
     }
 }
+/* Стили для тестов */
+.option.correct {
+    background: #e8f5e9 !important;
+    border-color: #4caf50 !important;
+    color: #2e7d32 !important;
+}
+
+.option.incorrect {
+    background: #ffebee !important;
+    border-color: #f44336 !important;
+    color: #c62828 !important;
+}
+
+.option input[type="radio"]:checked + span {
+    font-weight: 600;
+}
+
+.option label {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    width: 100%;
+}
+
+.option input[type="radio"] {
+    margin-right: 12px;
+    cursor: pointer;
+}
+
+/* Кнопка отправки теста */
+#submit-test-btn {
+    padding: 15px 40px;
+    font-size: 18px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+#submit-test-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+}

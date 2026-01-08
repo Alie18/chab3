@@ -60,6 +60,72 @@
         }
     </style>
 </head>
+<script src="js/test-manager.js"></script>
+<script>
+    // Инициализация тест-менеджера
+    const testManager = new TestManager();
+    
+    // Глобальные функции для вызова из HTML
+    window.submitTest = function(testId) {
+        const form = document.getElementById('test-form');
+        const test = App.getTests()[testId];
+        
+        if (!test) return;
+        
+        // Собрать ответы
+        const answers = [];
+        test.questions.forEach((q, i) => {
+            const selected = document.querySelector(`input[name="q${i}"]:checked`);
+            answers[i] = selected ? parseInt(selected.value) : null;
+        });
+        
+        // Проверить все ли ответы даны
+        const unanswered = answers.filter(a => a === null).length;
+        if (unanswered > 0) {
+            alert(`Пожалуйста, ответьте на все вопросы!\nОсталось: ${unanswered} вопросов`);
+            return;
+        }
+        
+        // Подсветить результаты
+        test.questions.forEach((q, i) => {
+            const options = document.querySelectorAll(`input[name="q${i}"]`);
+            options.forEach((opt, j) => {
+                const label = opt.closest('label');
+                if (label) {
+                    label.classList.remove('correct', 'incorrect');
+                    
+                    if (j === q.correct) {
+                        label.classList.add('correct');
+                    } else if (answers[i] === j) {
+                        label.classList.add('incorrect');
+                    }
+                }
+            });
+        });
+        
+        // Показать результат
+        const correct = answers.filter((a, i) => a === test.questions[i].correct).length;
+        const score = Math.round((correct / test.questions.length) * 100);
+        
+        const content = document.getElementById('content-area');
+        content.innerHTML = `
+            <div class="card results-card">
+                <h2>🎉 Тест завершён!</h2>
+                <div class="score">${score}%</div>
+                <p>Вы ответили правильно на <strong>${correct}</strong> из <strong>${test.questions.length}</strong> вопросов</p>
+                
+                <div style="margin-top: 32px;">
+                    <button class="btn btn-primary" onclick="App.showSection('dashboard')">
+                        🏠 На главную
+                    </button>
+                    <button class="btn btn-secondary" onclick="App.showSection('tests')" style="margin-left: 12px;">
+                        📝 Другие тесты
+                    </button>
+                </div>
+            </div>
+        `;
+    };
+</script>
 <body>
     <div class="page-container">
         <!-- Логотип -->

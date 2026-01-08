@@ -611,97 +611,126 @@ class App {
     }
 
     static renderTest(testId) {
+    const tests = this.getTests();
+    const test = tests[testId];
+    if (!test) return '<div class="card"><h3>Тест не найден</h3></div>';
+
+    return `
+        <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                <div>
+                    <h2>${test.title}</h2>
+                    <p>${test.description}</p>
+                </div>
+                <div style="text-align: right;">
+                    <div style="font-size: 18px; font-weight: 600; color: var(--primary);">${test.time}</div>
+                    <div>${test.questions.length} вопросов</div>
+                </div>
+            </div>
+
+            <div id="test-form">
+                ${test.questions.map((q, i) => `
+                    <div class="question">
+                        <div class="question-title">
+                            <span>${i + 1}.</span> ${q.text}
+                        </div>
+                        <div class="options">
+                            ${q.options.map((opt, j) => `
+                                <label class="option">
+                                    <input type="radio" name="q${i}" value="${j}">
+                                    <span>${opt}</span>
+                                </label>
+                            `).join('')}
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+
+            <div style="text-align: center; margin-top: 32px;">
+                <button class="btn btn-primary" id="submit-test-btn">
+                    ✅ Завершить тест
+                </button>
+            </div>
+        </div>
+    `;
+}
+
+    static setupTestHandlers(testId) {
+    const form = document.getElementById('test-form');
+    const submitBtn = document.getElementById('submit-test-btn');
+    
+    if (!form || !submitBtn) return;
+    
+    // Убираем стандартное поведение формы
+    form.onsubmit = null;
+    
+    submitBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        
         const tests = this.getTests();
         const test = tests[testId];
-        if (!test) return '<div class="card"><h3>Тест не найден</h3></div>';
-
-        return `
-            <div class="card">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
-                    <div>
-                        <h2>${test.title}</h2>
-                        <p>${test.description}</p>
-                    </div>
-                    <div style="text-align: right;">
-                        <div style="font-size: 18px; font-weight: 600; color: var(--primary);">${test.time}</div>
-                        <div>${test.questions.length} вопросов</div>
-                    </div>
-                </div>
-
-                <form id="test-form">
-                    ${test.questions.map((q, i) => `
-                        <div class="question">
-                            <div class="question-title">
-                                <span>${i + 1}.</span> ${q.text}
-                            </div>
-                            <div class="options">
-                                ${q.options.map((opt, j) => `
-                                    <label class="option">
-                                        <input type="radio" name="q${i}" value="${j}" required>
-                                        <span>${opt}</span>
-                                    </label>
-                                `).join('')}
-                            </div>
-                        </div>
-                    `).join('')}
-                </form>
-
-                <div style="text-align: center; margin-top: 32px;">
-                    <button type="submit" class="btn btn-primary" form="test-form" id="submit-test-btn">
-                        ✅ Завершить тест
+        if (!test) return;
+        
+        let correct = 0;
+        const userAnswers = [];
+        
+        // Собираем ответы пользователя
+        test.questions.forEach((q, i) => {
+            const selected = document.querySelector(`input[name="q${i}"]:checked`);
+            const userAnswer = selected ? parseInt(selected.value) : null;
+            userAnswers.push(userAnswer);
+            
+            if (userAnswer === q.correct) {
+                correct++;
+            }
+        });
+        
+        // Проверяем, все ли вопросы отвечены
+        const unanswered = userAnswers.filter(a => a === null).length;
+        if (unanswered > 0) {
+            alert(`Пожалуйста, ответьте на все вопросы!\nОсталось: ${unanswered} вопросов`);
+            return;
+        }
+        
+        // Подсвечиваем правильные/неправильные ответы
+        test.questions.forEach((q, i) => {
+            const options = document.querySelectorAll(`input[name="q${i}"]`);
+            options.forEach((opt, j) => {
+                const label = opt.closest('label');
+                if (label) {
+                    label.classList.remove('correct', 'incorrect');
+                    
+                    if (j === q.correct) {
+                        label.classList.add('correct');
+                    } else if (userAnswers[i] === j) {
+                        label.classList.add('incorrect');
+                    }
+                }
+            });
+        });
+        
+        // Показываем результат
+        const score = Math.round((correct / test.questions.length) * 100);
+        const content = document.getElementById('content-area');
+        
+        content.innerHTML = `
+            <div class="card results-card">
+                <h2>🎉 Тест завершён!</h2>
+                <div class="score">${score}%</div>
+                <p>Вы ответили правильно на <strong>${correct}</strong> из <strong>${test.questions.length}</strong> вопросов</p>
+                
+                <div style="margin-top: 32px;">
+                    <button class="btn btn-primary" onclick="App.showSection('dashboard')">
+                        🏠 На главную
+                    </button>
+                    <button class="btn btn-secondary" onclick="App.showSection('tests')" style="margin-left: 12px;">
+                        📝 Другие тесты
                     </button>
                 </div>
             </div>
         `;
-    }
-
-    static setupTestHandlers(testId) {
-        document.getElementById('test-form')?.addEventListener('submit', (e) => {
-            e.preventDefault();
-            
-            const tests = this.getTests();
-            const test = tests[testId];
-            let correct = 0;
-            
-            test.questions.forEach((q, i) => {
-                const selected = document.querySelector(`input[name="q${i}"]:checked`);
-                if (selected && parseInt(selected.value) === q.correct) {
-                    correct++;
-                }
-                
-                // Подсвечиваем правильный/неправильный ответ
-                const options = document.querySelectorAll(`input[name="q${i}"]`);
-                options.forEach((opt, j) => {
-                    const label = opt.closest('.option');
-                    if (j === q.correct) {
-                        label.classList.add('correct');
-                    } else if (selected && j === parseInt(selected.value)) {
-                        label.classList.add('incorrect');
-                    }
-                });
-            });
-
-            // Показываем результат
-            const score = Math.round((correct / test.questions.length) * 100);
-            const content = document.getElementById('content-area');
-            content.innerHTML = `
-                <div class="card results-card">
-                    <h2>🎉 Тест завершён!</h2>
-                    <div class="score">${score}%</div>
-                    <p>Вы ответили правильно на <strong>${correct}</strong> из <strong>${test.questions.length}</strong> вопросов</p>
-                    
-                    <div style="margin-top: 32px;">
-                        <button class="btn btn-primary" onclick="App.showSection('dashboard')">
-                            🏠 На главную
-                        </button>
-                        <button class="btn btn-secondary" onclick="App.showSection('tests')" style="margin-left: 12px;">
-                            📝 Другие тесты
-                        </button>
-                    </div>
-                </div>
-            `;
-        });
-    }
+    });
+}
 
     static tokens = {
         access_token: localStorage.getItem('access_token'),
